@@ -164,17 +164,18 @@ static NSString *const FICImageFormatProtectionModeKey = @"protectionMode";
 - (NSDictionary *)dictionaryRepresentation {
     NSMutableDictionary *dictionaryRepresentation = [NSMutableDictionary dictionary];
     
+    
     [dictionaryRepresentation setValue:_name forKey:FICImageFormatNameKey];
     [dictionaryRepresentation setValue:_family forKey:FICImageFormatFamilyKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithUnsignedInteger:_imageSize.width] forKey:FICImageFormatWidthKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithUnsignedInteger:_imageSize.height] forKey:FICImageFormatHeightKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithInt:_style] forKey:FICImageFormatStyleKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithUnsignedInteger:_maximumCount] forKey:FICImageFormatMaximumCountKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithInt:_devices] forKey:FICImageFormatDevicesKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithUnsignedInteger:_protectionMode] forKey:FICImageFormatProtectionModeKey];
+    [dictionaryRepresentation setValue:@(_imageSize.width) forKey:FICImageFormatWidthKey];
+    [dictionaryRepresentation setValue:@(_imageSize.height) forKey:FICImageFormatHeightKey];
+    [dictionaryRepresentation setValue:@(_style) forKey:FICImageFormatStyleKey];
+    [dictionaryRepresentation setValue:@(_maximumCount) forKey:FICImageFormatMaximumCountKey];
+    [dictionaryRepresentation setValue:@(_devices) forKey:FICImageFormatDevicesKey];
+    [dictionaryRepresentation setValue:@(_protectionMode) forKey:FICImageFormatProtectionModeKey];
 
-    [dictionaryRepresentation setValue:[NSNumber numberWithFloat:[[UIScreen mainScreen] scale]] forKey:FICImageTableScreenScaleKey];
-    [dictionaryRepresentation setValue:[NSNumber numberWithUnsignedInteger:[FICImageTableEntry metadataVersion]] forKey:FICImageTableEntryDataVersionKey];
+    [dictionaryRepresentation setValue:@([[UIScreen mainScreen] scale]) forKey:FICImageTableScreenScaleKey];
+    [dictionaryRepresentation setValue:@([FICImageTableEntry metadataVersion]) forKey:FICImageTableEntryDataVersionKey];
     
     return dictionaryRepresentation;
 }

@@ -81,9 +81,9 @@ static NSString *const FICImageCacheEntityKey = @"FICImageCacheEntityKey";
 - (instancetype)initWithNameSpace:(NSString *)nameSpace {
     self = [super init];
     if (self) {
-        _formats = [[NSMutableDictionary alloc] init];
-        _imageTables = [[NSMutableDictionary alloc] init];
-        _requests = [[NSMutableDictionary alloc] init];
+        _formats = [NSMutableDictionary dictionary];
+        _imageTables = [NSMutableDictionary dictionary];
+        _requests = [NSMutableDictionary dictionary];
         _nameSpace = nameSpace;
     }
     return self;
@@ -162,7 +162,7 @@ static NSString *const FICImageCacheEntityKey = @"FICImageCacheEntityKey";
 	
     BOOL imageExists = NO;
     
-    FICImageTable *imageTable = [_imageTables objectForKey:formatName];
+    FICImageTable *imageTable = _imageTables[formatName];
     NSString *entityUUID = [entity fic_UUID];
     NSString *sourceImageUUID = [entity fic_sourceImageUUID];
     
@@ -202,7 +202,7 @@ static NSString *const FICImageCacheEntityKey = @"FICImageCacheEntityKey";
                 // We check to see if this image is already being fetched.
                 BOOL needsToFetch = NO;
                 @synchronized (_requests) {
-                    NSMutableDictionary *requestDictionary = [_requests objectForKey:sourceImageURL];
+                    NSMutableDictionary *requestDictionary = _requests[sourceImageURL];
                     if (requestDictionary == nil) {
                         // If we're here, then we aren't currently fetching this image.
                         requestDictionary = [NSMutableDictionary dictionary];
@@ -254,13 +254,13 @@ static NSString *const FICImageCacheEntityKey = @"FICImageCacheEntityKey";
 
     if (requestDictionary != nil) {
         for (NSMutableDictionary *entityDictionary in [requestDictionary allValues]) {
-            id <FICEntity> entity = [entityDictionary objectForKey:FICImageCacheEntityKey];
-            NSString *formatName = [entityDictionary objectForKey:FICImageCacheFormatKey];
-            NSDictionary *completionBlocksDictionary = [entityDictionary objectForKey:FICImageCacheCompletionBlocksKey];
+            id <FICEntity> entity = entityDictionary[FICImageCacheEntityKey];
+            NSString *formatName = entityDictionary[FICImageCacheFormatKey];
+            NSDictionary *completionBlocksDictionary = entityDictionary[FICImageCacheCompletionBlocksKey];
             if (image != nil){
                 [self _processImage:image forEntity:entity completionBlocksDictionary:completionBlocksDictionary];
             } else {
-                NSArray *completionBlocks = [completionBlocksDictionary objectForKey:formatName];
+                NSArray *completionBlocks = completionBlocksDictionary[formatName];
                 if (completionBlocks != nil) {
                     dispatch_async(dispatch_get_main_queue(), ^{
                         for (FICImageCacheCompletionBlock completionBlock in completionBlocks) {
@@ -275,12 +275,12 @@ static NSString *const FICImageCacheEntityKey = @"FICImageCacheEntityKey";
 
 static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDictionary *entityRequestsDictionary, id <FICEntity> entity, FICImageCacheCompletionBlock completionBlock) {
     NSString *entityUUID = [entity fic_UUID];
-    NSMutableDictionary *requestDictionary = [entityRequestsDictionary objectForKey:entityUUID];
+    NSMutableDictionary *requestDictionary = entityRequestsDictionary[entityUUID];
     NSMutableDictionary *completionBlocks = nil;
     
     if (requestDictionary == nil) {
         // This is the first time we're dealing with this particular entity for this URL request.
-        requestDictionary = [NSMutableDictionary dictionaryWithObjectsAndKeys:entity, FICImageCacheEntityKey, nil];
+        requestDictionary = @{FICImageCacheEntityKey: entity}.mutableCopy;
         [entityRequestsDictionary setObject:requestDictionary forKey:entityUUID];
         [requestDictionary setObject:formatName forKey:FICImageCacheFormatKey];
         
@@ -290,11 +290,11 @@ static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDicti
         [requestDictionary setObject:completionBlocks forKey:FICImageCacheCompletionBlocksKey];
     } else {
         // We already have a request dictionary for this entity, so we just need to append a completion block.
-        completionBlocks = [requestDictionary objectForKey:FICImageCacheCompletionBlocksKey];
+        completionBlocks = requestDictionary[FICImageCacheCompletionBlocksKey];
     }
     
     if (completionBlock != nil) {
-        NSMutableArray *blocksArray = [completionBlocks objectForKey:formatName];
+        NSMutableArray *blocksArray = completionBlocks[formatName];
         if (blocksArray == nil) {
             blocksArray = [NSMutableArray array];
             [completionBlocks setObject:blocksArray forKey:formatName];
@@ -312,11 +312,13 @@ static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDicti
         NSDictionary *completionBlocksDictionary = nil;
         
         if (completionBlock != nil) {
-            completionBlocksDictionary = [NSDictionary dictionaryWithObject:[NSArray arrayWithObject:[completionBlock copy]] forKey:formatName];
+            completionBlocksDictionary = @{
+                formatName: [completionBlock copy]
+            };
         }
         
         NSString *entityUUID = [entity fic_UUID];
-        FICImageTable *imageTable = [_imageTables objectForKey:formatName];
+        FICImageTable *imageTable = _imageTables[formatName];
         if (imageTable) {
             [imageTable deleteEntryForEntityUUID:entityUUID];
         
@@ -330,8 +332,8 @@ static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDicti
 - (void)_processImage:(UIImage *)image forEntity:(id <FICEntity>)entity completionBlocksDictionary:(NSDictionary *)completionBlocksDictionary {
     for (NSString *formatToProcess in [self formatsToProcessForCompletionBlocks:completionBlocksDictionary
                                                                          entity:entity]) {
-        FICImageTable *imageTable = [_imageTables objectForKey:formatToProcess];
-        NSArray *completionBlocks = [completionBlocksDictionary objectForKey:formatToProcess];
+        FICImageTable *imageTable = _imageTables[formatToProcess];
+        NSArray *completionBlocks = completionBlocksDictionary[formatToProcess];
         [self _processImage:image forEntity:entity imageTable:imageTable completionBlocks:completionBlocks];
     }
 }
@@ -426,7 +428,7 @@ static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDicti
 #pragma mark - Checking for Image Existence
 
 - (BOOL)imageExistsForEntity:(id <FICEntity>)entity withFormatName:(NSString *)formatName {
-    FICImageTable *imageTable = [_imageTables objectForKey:formatName];
+    FICImageTable *imageTable = _imageTables[formatName];
     NSString *entityUUID = [entity fic_UUID];
     NSString *sourceImageUUID = [entity fic_sourceImageUUID];
     
@@ -449,11 +451,11 @@ static void _FICAddCompletionBlockForEntity(NSString *formatName, NSMutableDicti
 
     BOOL cancelImageLoadingForEntity = NO;
     @synchronized (_requests) {
-        NSMutableDictionary *requestDictionary = [_requests objectForKey:sourceImageURL];
+        NSMutableDictionary *requestDictionary = _requests[sourceImageURL];
         if (requestDictionary) {
-            NSMutableDictionary *entityRequestsDictionary = [requestDictionary objectForKey:entityUUID];
+            NSMutableDictionary *entityRequestsDictionary = requestDictionary[entityUUID];
             if (entityRequestsDictionary) {
-                NSMutableDictionary *completionBlocksDictionary = [entityRequestsDictionary objectForKey:FICImageCacheCompletionBlocksKey];
+                NSMutableDictionary *completionBlocksDictionary = entityRequestsDictionary[FICImageCacheCompletionBlocksKey];
                 [completionBlocksDictionary removeObjectForKey:formatName];
 
                 if ([completionBlocksDictionary count] == 0) {

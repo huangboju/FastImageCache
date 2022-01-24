@@ -684,11 +684,12 @@ static void _FICReleaseImageData(void *info, const void *data, size_t size) {
     @autoreleasepool {
         [_lock lock];
         
-        NSDictionary *metadataDictionary = [NSDictionary dictionaryWithObjectsAndKeys:
-                                            [_indexMap copy], FICImageTableIndexMapKey,
-                                            [_sourceImageMap copy], FICImageTableContextMapKey,
-                                            [[_MRUEntries array] copy], FICImageTableMRUArrayKey,
-                                            [_imageFormatDictionary copy], FICImageTableFormatKey, nil];
+        NSDictionary *metadataDictionary = @{
+            FICImageTableIndexMapKey: [_indexMap copy],
+            FICImageTableContextMapKey: [_sourceImageMap copy],
+            FICImageTableMRUArrayKey: [[_MRUEntries array] copy],
+            FICImageTableFormatKey: [_imageFormatDictionary copy]
+        };
 
         __block int32_t metadataVersion = OSAtomicIncrement32(&_metadataVersion);
 
